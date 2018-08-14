@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Mvc.Internal
@@ -59,10 +60,6 @@ namespace Microsoft.AspNetCore.Mvc.Internal
             _actionDescriptorChangeProviders = actionDescriptorChangeProviders.ToArray();
 
             ConventionalEndpointInfos = new List<MvcEndpointInfo>();
-
-            Extensions.Primitives.ChangeToken.OnChange(
-                GetCompositeChangeToken,
-                UpdateEndpoints);
         }
 
         private List<Endpoint> CreateEndpoints()
@@ -409,7 +406,7 @@ namespace Microsoft.AspNetCore.Mvc.Internal
             return new CompositeChangeToken(changeTokens);
         }
 
-        public override IChangeToken GetChangeToken() => GetCompositeChangeToken();
+        public override IChangeToken GetChangeToken() => NullChangeToken.Singleton;
 
         public override IReadOnlyList<Endpoint> Endpoints
         {
@@ -431,14 +428,6 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                 }
 
                 return localEndpoints;
-            }
-        }
-
-        private void UpdateEndpoints()
-        {
-            lock (_lock)
-            {
-                _endpoints = CreateEndpoints();
             }
         }
 
