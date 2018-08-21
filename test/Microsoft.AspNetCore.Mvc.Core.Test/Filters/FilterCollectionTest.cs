@@ -1,6 +1,9 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Testing;
 using Xunit;
 
@@ -77,6 +80,60 @@ namespace Microsoft.AspNetCore.Mvc.Filters
                 () => collection.Add(typeof(NonFilter)),
                 "filterType",
                 expectedMessage);
+        }
+
+        [Fact]
+        public void Add_UnwrapsFilterFactoriesWithEmptyConstructors()
+        {
+            // Arrange
+            var collection = new FilterCollection();
+
+            // Act
+            var filter = collection.Add<TestFilterFactoryWithParameterlessCtor>();
+
+            // Assert
+            Assert.IsType<TestFilterFactoryWithParameterlessCtor>(filter);
+        }
+
+        [Fact]
+        public void Add_DoesNotUnwrapFilterFactoriesWithParameteredConstructors()
+        {
+            // Arrange
+            var collection = new FilterCollection();
+
+            // Act
+            var filter = collection.Add<TestFilterFactoryWithParameterCtor>();
+
+            // Assert
+            var typeFilter = Assert.IsType<TypeFilterAttribute>(filter);
+            Assert.Equal(typeof(TestFilterFactoryWithParameterCtor), typeFilter.ImplementationType);
+        }
+
+        [Fact]
+        public void Add_DoesNotUnwrapFilterFactoriesWithNonPublicEmptyConstructors()
+        {
+            // Arrange
+            var collection = new FilterCollection();
+
+            // Act
+            var filter = collection.Add<TestFilterFactoryWithNonPublicCtor>();
+
+            // Assert
+            var typeFilter = Assert.IsType<TypeFilterAttribute>(filter);
+            Assert.Equal(typeof(TestFilterFactoryWithNonPublicCtor), typeFilter.ImplementationType);
+        }
+
+        [Fact]
+        public void Add_WithAuthorizeFilter()
+        {
+            // Arrange
+            var collection = new FilterCollection();
+
+            // Act
+            var filter = collection.Add<AuthorizeFilter>();
+
+            // Assert
+            Assert.IsType<AuthorizeFilter>(filter);
         }
 
         [Fact]
@@ -161,6 +218,37 @@ namespace Microsoft.AspNetCore.Mvc.Filters
 
         private class NonFilter
         {
+        }
+
+        public class TestFilterFactoryWithParameterlessCtor : IFilterFactory, IOrderedFilter
+        {
+            public int Order { get; set; } = 1000;
+
+            public bool IsReusable => true;
+
+            public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => null;
+        }
+
+        public class TestFilterFactoryWithNonPublicCtor : IFilterFactory, IOrderedFilter
+        {
+            private TestFilterFactoryWithNonPublicCtor() { }
+
+            public int Order { get; set; } = 1000;
+
+            public bool IsReusable => true;
+
+            public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => null;
+        }
+
+        public class TestFilterFactoryWithParameterCtor : IFilterFactory, IOrderedFilter
+        {
+            public TestFilterFactoryWithParameterCtor(object parameter) { }
+
+            public int Order { get; set; } = 1000;
+
+            public bool IsReusable => true;
+
+            public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => null;
         }
     }
 }

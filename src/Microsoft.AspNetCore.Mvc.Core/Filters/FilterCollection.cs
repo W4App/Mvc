@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.ObjectModel;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Core;
 
 namespace Microsoft.AspNetCore.Mvc.Filters
@@ -84,6 +85,17 @@ namespace Microsoft.AspNetCore.Mvc.Filters
                     filterType.FullName,
                     typeof(IFilterMetadata).FullName);
                 throw new ArgumentException(message, nameof(filterType));
+            }
+
+            if (typeof(IFilterFactory).IsAssignableFrom(filterType))
+            {
+                var parameterlessConstructor = filterType.GetConstructor(BindingFlags.Public | BindingFlags.Instance, binder: null, Type.EmptyTypes, modifiers: null);
+                if (parameterlessConstructor != null)
+                {
+                    var filterFactoryInstance = (IFilterFactory)parameterlessConstructor.Invoke(Array.Empty<object>());
+                    Add(filterFactoryInstance);
+                    return filterFactoryInstance;
+                }
             }
 
             var filter = new TypeFilterAttribute(filterType) { Order = order };
